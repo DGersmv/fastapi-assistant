@@ -1,9 +1,12 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File
 import openai
 import os
 
 app = FastAPI()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# Здесь будем хранить загруженные файлы
+loaded_files = {}
 
 @app.post("/ask")
 async def ask(request: Request):
@@ -25,8 +28,15 @@ async def ask(request: Request):
     except Exception as e:
         return {"error": str(e)}
 
-# ⬇️ ОБЯЗАТЕЛЬНО добавить запуск сервера
+@app.post("/upload")
+async def upload(file: UploadFile = File(...)):
+    content = await file.read()
+    text = content.decode('utf-8', errors='ignore')
+    loaded_files[file.filename] = text
+    return {"info": f"Файл '{file.filename}' успешно загружен.", "size": len(text)}
+
+# ⬇️ ОБЯЗАТЕЛЬНО запуск сервера
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8080))  # Railway выставляет PORT в переменные окружения
+    port = int(os.environ.get("PORT", 8080))  # Railway автоматически задаёт порт
     uvicorn.run(app, host="0.0.0.0", port=port)
